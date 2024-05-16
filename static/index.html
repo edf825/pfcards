@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sedan+SC&display=swap" rel="stylesheet">
+<style type="text/css">
+body {
+    font-family:'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', Helvetica, sans-serif;
+    width: 210mm;
+    padding: 0;
+    margin: 0;
+}
+
+hr {
+    border: none;
+    height: 0.3mm;
+    background-color: lightgrey;
+}
+
+#container {
+    display: block;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+}
+
+.card-outer {
+    display: inline-block;
+    padding: 0;
+    width: 6.4cm;
+    height: 8.9cm;
+    font-size: 2mm;
+    overflow: hidden;
+    margin: 1mm;
+    border: 0.2mm solid black;
+    line-height: 1em;
+}
+
+.card-inner {
+    margin: 0.25em;
+}
+
+.title {
+    font-family: 'Sedan SC';
+    font-size: 1.5em;
+    font-weight: bold;
+    margin: 0;
+    background-color: darkred;
+    color: white;
+    padding: 0.25em;
+}
+
+.subtitle {
+    font-family: 'Sedan SC';
+    font-size: 1.1em;
+    margin-bottom: 0.25em;
+}
+
+.error {
+    color: darkred;
+}
+
+.traits {
+    margin: 1mm 0 1mm 0;
+}
+
+.trait {
+    display: inline-block;
+    font-size: 0.8em;
+    font-weight: bold;
+    padding: 0 0.5mm 0 0.5mm;
+    margin: 0.1mm 0.3mm 0.1mm 0;
+    background-color: darkblue;
+    color: white;
+}
+
+.field-name {
+    font-size: 0.8em;
+    text-transform: uppercase;
+    font-weight: bold;
+    margin-right: 0.25em;
+}
+</style>
+
+<style type="text/css" media="print">
+#container {
+    width: 21cm;
+}
+
+.dontprint {
+    display: none;
+}
+
+.card-outer {
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dontprint">
+    <ol>
+        <li>Export JSON from Pathbuilder app. This will give you a 6 digit code.</li>
+        <li>Enter 6 digit code below and hit "Go".</li>
+        <li>Print.</li>
+    </ol>
+    <form id="number-form" target="hack">
+        Pathbuilder ID:
+        <input type="number" id="jsonId" />
+        <button type="submit" id="go">Go</button>
+    </form>
+    <iframe name="hack" style="display:none"></iframe>
+</div>
+
+<div id="container"></div>
+
+<script type="text/javascript">
+let numberField = document.getElementById("jsonId");
+let button = document.getElementById("go");
+let container = document.getElementById("container");
+let form = document.getElementById("number-form");
+
+function makeDiv(inner, classList) {
+    let elem = document.createElement("div");
+    elem.classList = classList;
+    elem.innerHTML = inner;
+    return elem;
+}
+
+function makeSpan(inner, classList) {
+    let elem = document.createElement("span");
+    elem.classList = classList;
+    elem.innerHTML = inner;
+    return elem;
+}
+
+function unpackValue(v) {
+    // turn {"value": "abc"} into "abc"
+    if (v instanceof Object && Object.keys(v).length === 1 && "value" in v) {
+        return v["value"];
+    }
+    return v;
+}
+
+function formatValue(v) {
+    if (v instanceof String || typeof(v) === "string") {
+        return v;
+    }
+    return JSON.stringify(v);
+}
+
+function field(k, v) {
+    return makeDiv(`<span class="field-name">${k}</span> ${formatValue(unpackValue(v))}`, ["field"]);
+}
+
+function renderTraits(traits) {
+    let traitList = Array();
+    let traitsElem = makeDiv("", ["traits"])
+    if (traits["rarity"]) traitList.push(traits["rarity"]);
+    if (traits["traditions"]) traitList = traitList.concat(traits["traditions"]);
+    if (traits["value"]) traitList = traitList.concat(traits["value"]);
+    for (const trait of traitList) traitsElem.appendChild(makeSpan(trait, ["trait"]));
+    return traitsElem;
+}
+
+function listObj(obj) {
+    let outer = makeDiv("");
+    for (const [k, v] of Object.entries(obj)) {
+        if (!isEmpty(v)) outer.appendChild(field(k, v));
+    }
+    return outer;
+}
+
+function renderCard(card) {
+    let outer = document.createElement("div");
+    outer.classList.add("card-outer");
+
+    let inner = document.createElement("div");
+    inner.classList.add("card-inner");
+
+    var rest = card;
+    function consume(name) {
+        var _rest = rest;
+        var {[name]: value, ..._rest} = _rest;
+        rest = _rest;
+        return value;
+    }
+
+    var system = consume("system") || {};
+    function consumeSys(name) {
+        var _rest = system;
+        var {[name]: value, ..._rest} = _rest;
+        system = _rest;
+        return value;
+    }
+    let publication = consumeSys("publication");
+    let desc = consumeSys("description");
+
+    let id = consume("_id");
+    let img = consume("img");
+    let folder = consume("folder");
+    let title = consume("name");
+    outer.appendChild(makeDiv(title, ["title"]));
+
+    let type = consume("type");
+    console.log(type)
+    if (type == "spell") {
+        let tradition = consume("tradition");
+        let ability = consume("ability");
+        let klass = consume("class") || "";
+        let spellType = consume("spell_type") || "Spell";
+        let level = (consumeSys("level") || {}).value || "";
+        inner.appendChild(makeDiv(`${klass} ${spellType} ${level}, ${tradition}, ${ability}`, ["subtitle"]));
+
+        // XXX no idea what this is
+        let overlays = consumeSys("overlays");
+
+        let traits = consumeSys("traits");
+        inner.appendChild(renderTraits(traits));
+
+        for (var fieldName of ["time", "area", "range", "target"]) {
+            let fieldVal = consumeSys(fieldName);
+            if (fieldVal && !isEmpty(fieldVal)) inner.appendChild(field(fieldName, fieldVal));
+        }
+
+        let duration = consumeSys("duration");
+        if (duration && duration.sustained) inner.appendChild(field("sustained", true));
+        if (duration && !isEmpty(duration.value)) inner.appendChild(field("duration", duration.value));
+
+        for (var fieldName of ["sustained", "counteraction", "hasCounteractCheck"]) {
+            let fieldVal = consumeSys(fieldName);
+            if (fieldVal) system[fieldName] = true;
+        }
+
+        inner.appendChild(listObj(system));
+        system = {};
+    }
+
+    if (type == "error") {
+        let message = consume("message");
+        if (message) inner.appendChild(makeDiv(`<p>${message}</p>`, ["error"]));
+    }
+
+    if (type == "stats") {
+        inner.appendChild(listObj(rest));
+        rest = {};
+    }
+
+    if (type == "feat") {
+        let level = consumeSys("level");
+        inner.appendChild(makeDiv(`Feat ${formatValue(unpackValue(level))}`, ["subtitle"]));
+
+        let traits = consumeSys("traits");
+        inner.appendChild(renderTraits(traits));
+    }
+
+    system = system || {};
+
+    if (!isEmpty(rest)) inner.appendChild(listObj(rest));
+    if (system && !isEmpty(system)) inner.appendChild(listObj(system));
+
+    if (desc && desc.value) {
+        let descText = desc.value.replaceAll(/@UUID\[[^\]]*]{([^}]*)}/g, "<strong>$1</strong>");
+        descText = descText.replaceAll(/@UUID\[[^\]]*\.([^.\]]*)\]/g, "<strong>$1</strong>");
+        inner.appendChild(makeDiv(descText));
+    }
+
+    outer.appendChild(inner);
+    document.getElementById("container").appendChild(outer);
+}
+
+function isEmpty(obj) {
+    if (obj === null) return true;
+    if (obj instanceof Array || obj instanceof String || typeof(obj) === "string") return obj.length === 0;
+    if (obj instanceof Object) {
+        if (Object.keys(obj).length === 0) return true;
+        if (Object.keys(obj).length === 1 && "value" in obj && isEmpty(obj.value)) return true;
+    }
+    return false;
+}
+
+async function getCards(id) {
+    const response = await fetch("/cards/", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({"id": id})
+    });
+    const json = await response.json();
+    for (let card of json) {
+        renderCard(card);
+    }
+}
+
+button.addEventListener("submit", (ev) => {getCards(numberField.value); return false;});
+form.addEventListener("submit", (ev) => {getCards(numberField.value); return false;});
+
+const urlParams = new URLSearchParams(window.location.search);
+const queryId = urlParams.get('id');
+if (queryId) {
+    numberField.value = queryId;
+    form.dispatchEvent(new Event("submit"));
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+[submodule "foundry-pf2e"]
+	path = foundry-pf2e
+	url = https://github.com/foundryvtt/pf2e.git
+	shallow = true
+[submodule "foundry-pf2e-old"]
+	path = foundry-pf2e-old
+	url = https://github.com/foundryvtt/pf2e.git
+	shallow = true
