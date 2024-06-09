@@ -1,0 +1,14 @@
+version: "3.9"
+
+services:
+  pfcards:
+    build: .
+    hostname: pfcards
+    command: fastapi run pfcards/app.py
+    networks:
+      - cloudflare-tunnel
+
+networks:
+  cloudflare-tunnel:
+    external:
+      name: tunnel
