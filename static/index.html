@@ -283,7 +283,7 @@ function isEmpty(obj) {
 }
 
 async function getCards(id) {
-    const response = await fetch("/cards/", {
+    const response = await fetch("cards/", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({"id": id})
