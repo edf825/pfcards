@@ -4,6 +4,7 @@ services:
   pfcards:
     build: .
     hostname: pfcards
+    restart: unless-stopped
     command: fastapi run pfcards/app.py
     networks:
       - cloudflare-tunnel
