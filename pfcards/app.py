@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 import markdown
 import requests
+import re
 import json
 import logging
 
@@ -98,7 +99,14 @@ def cards(cards_model: CardsModel):
     card_list = list(cards.values())
     for card in card_list:
         if "markdown" in card:
-            card["parsed_markdown"] = markdown.markdown(card["markdown"].replace("\r\n>", ">"), extensions=["md_in_html"])
+            card["parsed_markdown"] = markdown.markdown(
+                re.sub(
+                    "<([^/][^>]*)>",
+                    '<\\1 markdown="1">', 
+                    card["markdown"].replace("\r\n>", ">"),
+                ),
+                extensions=["md_in_html"],
+            )
 
     return JSONResponse(card_list)
 
