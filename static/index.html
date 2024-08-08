@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+<title>PF2e Cards</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sedan+SC&display=swap" rel="stylesheet">
@@ -28,9 +29,9 @@ hr {
 .card-outer {
     display: inline-block;
     padding: 0;
-    width: 6.4cm;
-    height: 8.9cm;
-    font-size: 2mm;
+    width: 6.7cm;
+    height: 9.5cm;
+    font-size: 2.7mm;
     overflow: hidden;
     margin: 1mm;
     border: 0.2mm solid black;
@@ -39,6 +40,19 @@ hr {
 
 .card-inner {
     margin: 0.25em;
+}
+
+a {
+    text-decoration: auto;
+    color: inherit;
+}
+
+p {
+    margin: 0.25mm;
+}
+
+ul {
+    margin: 0.25mm;
 }
 
 .title {
@@ -55,6 +69,10 @@ hr {
     font-family: 'Sedan SC';
     font-size: 1.1em;
     margin-bottom: 0.25em;
+}
+
+.actions {
+    float: right;
 }
 
 .error {
@@ -123,6 +141,8 @@ let button = document.getElementById("go");
 let container = document.getElementById("container");
 let form = document.getElementById("number-form");
 
+let KNOWN_TAGS = ["div", "row", "column", "p", "hr", "br", "actions", "traits", "trait", "strong", "a", "sup", "em", "ul", "ol", "li", "spoilers", "title"];
+
 function makeDiv(inner, classList) {
     let elem = document.createElement("div");
     elem.classList = classList;
@@ -175,6 +195,83 @@ function listObj(obj) {
 }
 
 function renderCard(card) {
+    if (card.parsed_markdown) {
+        renderMarkdownCard(card);
+    } else {
+        renderOtherCard(card);
+    }
+}
+
+function walkTheDOM(node, func)
+{
+  func(node);
+  node = node.firstChild;
+  while (node)
+  {
+    walkTheDOM(node, func);
+    node = node.nextSibling;
+  }
+}
+
+function replaceActions(actions) {
+    if (!actions) return "";
+    actions = actions.replace("Single Action", "&#9670;");
+    actions = actions.replace("Two Actions", "&#9670;&#9670;");
+    actions = actions.replace("Three Actions", "&#9670;&#9670;&#9670;");
+    actions = actions.replace("Free Action", "&#9671;");
+    actions = actions.replace("Reaction", "&#8617;");
+    actions = actions.replace("to", "&ndash;");
+    actions = actions.replace("or", "/");
+    return actions;
+}
+
+function renderMarkdownCard(card) {
+    let outer = document.createElement("div");
+    outer.classList.add("card-outer");
+
+    let inner = makeDiv("", ["card-inner"]);
+
+    let markdown = document.createElement("div");
+    markdown.innerHTML = card.parsed_markdown;
+
+    let title = markdown.getElementsByTagName("title")[0];
+    title.parentNode.removeChild(title);
+
+    title = makeDiv(card.name, ["title"]);
+    title.appendChild(makeSpan(replaceActions(card.actions), ["actions"]));
+    outer.appendChild(title);
+
+    subtitle = makeDiv(`${card.type} ${card.level || ""}`, ["subtitle"]);
+    inner.appendChild(subtitle);
+
+    if (card.trait) {
+        let traitsElem = makeDiv("", ["traits"])
+        for (const trait of card.trait) traitsElem.appendChild(makeSpan(trait, ["trait"]));
+        inner.appendChild(traitsElem);
+    }
+
+    unknownElems = [];
+    walkTheDOM(markdown, (elem) => {
+        if (!elem.tagName) return;
+        name = elem.tagName.toLowerCase();
+        if (name == "actions") {
+            elem.innerHTML = replaceActions(elem.getAttribute("string")) + elem.innerHTML;
+        }
+        if (!KNOWN_TAGS.includes(name) && !unknownElems.includes(name)) {
+            unknownElems.push(name);
+        }
+    });
+
+    if (unknownElems.length) {
+        inner.appendChild(makeDiv(`Unknown elements found ${unknownElems}`, ["error"]));
+    }
+    inner.appendChild(markdown);
+    outer.appendChild(inner);
+
+    document.getElementById("container").appendChild(outer);
+}
+
+function renderOtherCard(card) {
     let outer = document.createElement("div");
     outer.classList.add("card-outer");
 

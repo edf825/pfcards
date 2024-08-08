@@ -3,11 +3,18 @@ from fastapi.staticfiles import StaticFiles
 from starlette.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
+import markdown
 import requests
 import json
 import logging
 
-from .packs import load_packs
+# from .foundry import load_packs
+from pfcards.aonprd import load_packs
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s | %(levelname)-8s | %(module)s:%(funcName)s:%(lineno)d - %(message)s",
+)
 
 LOG = logging.getLogger(__name__)
 PACKS = load_packs()
@@ -88,7 +95,12 @@ def cards(cards_model: CardsModel):
 
         cards[(name, "feats")] = card
 
-    return JSONResponse(list(cards.values()))
+    card_list = list(cards.values())
+    for card in card_list:
+        if "markdown" in card:
+            card["parsed_markdown"] = markdown.markdown(card["markdown"].replace("\r\n>", ">"), extensions=["md_in_html"])
+
+    return JSONResponse(card_list)
 
 def json_url(_id):
     return f"https://pathbuilder2e.com/json.php?id={_id}"
